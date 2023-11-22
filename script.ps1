@@ -2,33 +2,40 @@ param(
     [string]$targetVersion
 )
 
-# Get the environment variable named "defaultVersion"
-$defaultVersion = [System.Environment]::GetEnvironmentVariable("defaultVersion", [System.EnvironmentVariableTarget]::User)
-
 # Set the base path to AppData\Roaming\nvm
 $basePath = [System.IO.Path]::Combine($env:APPDATA, "nvm")
+
+$defaultVersionFolder = Get-ChildItem -Path $basePath -Directory | Where-Object { $_.Name -like 'real_*' } | Select-Object -First 1
+
+if ($defaultVersionFolder) {
+    $defaultVersion = $defaultVersionPath.Name -replace '^real_'
+} else {
+    Write-Error "Error: No default version found."
+    exit 1
+}
 
 # Check if the folder named like defaultVersion exists
 $defaultVersionPath = Join-Path $basePath $defaultVersion
 if (-not (Test-Path $defaultVersionPath -PathType Container)) {
-    Write-Error "Error: Folder '$defaultVersion' does not exist."
+    Write-Error "Error: Default version '$defaultVersion' is not installed."
     exit 1
 }
 
-# Check if the folder named like "real_" + defaultVersion exists
 $realDefaultVersionPath = Join-Path $basePath "real_$defaultVersion"
 if (-not (Test-Path $realDefaultVersionPath -PathType Container)) {
-    # Make a copy of the folder named defaultVersion, naming it "real_" + defaultVersion
-    Copy-Item -Path $defaultVersionPath -Destination $realDefaultVersionPath -Recurse
+    # Rename the folder named defaultVersion, naming it "real_" + defaultVersion
+    Rename-Item -Path $defaultVersionPath -NewName "real_$defaultVersion"
 }
 
 # Delete the folder named defaultVersion
 Remove-Item -Path $defaultVersionPath -Recurse -Force
 
-# Copy the folder named "real_" + version naming it as version
-$realTargetVersionPath = Join-Path $basePath "real_$version"
-$targetVersionPath = Join-Path $basePath "real_$version"
+if ($targetVersion -eq $defaultVersion) {
+    $targetVersion = "real_$targetVersion"
+}
+$targetVersionPath = Join-Path $basePath $targetVersion
 
-Copy-Item -Path $realTargetVersionPath -Destination $targetVersionPath -Recurse
+# Make a junction from targetVersion to defaultVersion
+New-Item -Path $defaultVersionPath -ItemType Junction -Value $targetVersionPath
 
-Write-Host "Folders updated successfully."
+Write-Host "Switched to $defaultVersion."
