@@ -8,7 +8,7 @@ $basePath = [System.IO.Path]::Combine($env:APPDATA, "nvm")
 $defaultVersionFolder = Get-ChildItem -Path $basePath -Directory | Where-Object { $_.Name -like 'real_*' } | Select-Object -First 1
 
 if ($defaultVersionFolder) {
-    $defaultVersion = $defaultVersionPath.Name -replace '^real_'
+    $defaultVersion = $defaultVersionFolder.Name -replace '^real_'
 } else {
     Write-Error "Error: No default version found."
     exit 1
@@ -38,4 +38,4 @@ $targetVersionPath = Join-Path $basePath $targetVersion
 # Make a junction from targetVersion to defaultVersion
 New-Item -Path $defaultVersionPath -ItemType Junction -Value $targetVersionPath
 
-Write-Host "Switched to $defaultVersion."
+Write-Host "Switched to $targetVersion."
